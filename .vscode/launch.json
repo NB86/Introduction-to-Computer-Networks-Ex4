@@ -8,7 +8,7 @@
             "name": "Python Debugger: main file with Arguments",
             "type": "debugpy",
             "request": "launch",
-            "program": "main.py",
+            "program": "src\\main.py",
             "console": "integratedTerminal",
             "args": "${command:pickArgs}"
         }
