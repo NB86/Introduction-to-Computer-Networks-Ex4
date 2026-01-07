@@ -105,14 +105,14 @@ def handle_arrival(event: Event, config, load_balancer, event_queue, stats):
     next_arrival_time = current_time + next_interval
     
     # We stop creating NEW arrivals if time exceeds T
-    if next_arrival_time < config.max_time:
+    if next_arrival_time <= config.max_time:
         next_event = Event(
             time=next_arrival_time,
             event_type=EventType.ARRIVAL,
             payload=None
         )
         heapq.heappush(event_queue, next_event)
-
+        
     # --- Process Current Request ---
     # Create the request object
     req = Request(id=stats.get_next_id(), arrival_time=current_time, service_start_time=None, service_duration=None)
@@ -138,19 +138,20 @@ def handle_arrival(event: Event, config, load_balancer, event_queue, stats):
         
         departure_time = current_time + service_duration
         
-        # Schedule Departure
-        dep_event = Event(
-            time=departure_time,
-            event_type=EventType.DEPARTURE,
-            payload=req,
-            server_index=server.id
-        )
-        heapq.heappush(event_queue, dep_event)
+        if departure_time <= config.max_time:
+            # Schedule Departure
+            dep_event = Event(
+                time=departure_time,
+                event_type=EventType.DEPARTURE,
+                payload=req,
+                server_index=server.id
+            )
+            heapq.heappush(event_queue, dep_event)
         
     # If it went into the queue, we do NOT schedule a departure yet. 
     # It will be scheduled later, when the server finishes the previous job.
 
-def handle_departure(event: Event, load_balancer, event_queue, stats):
+def handle_departure(event: Event, config, load_balancer, event_queue, stats):
     """
     Handles the completion of a request at a specific server.
     """
@@ -187,13 +188,15 @@ def handle_departure(event: Event, load_balancer, event_queue, stats):
         # Schedule the FUTURE Departure
         departure_time = current_time + service_duration
         
-        new_event = Event(
-            time=departure_time,
-            event_type=EventType.DEPARTURE,
-            payload=next_req,
-            server_index=server.id
-        )
-        heapq.heappush(event_queue, new_event)
+        if departure_time <= config.max_time:
+            # Schedule Departure
+            new_event = Event(
+                time=departure_time,
+                event_type=EventType.DEPARTURE,
+                payload=next_req,
+                server_index=server.id
+            )
+            heapq.heappush(event_queue, new_event)
         
     else:
         # --- SCENARIO B: The queue is empty ---
@@ -211,7 +214,7 @@ def main():
     first_interval = random.expovariate(config.arrival_rate)
     first_arrival_time = current_time + first_interval
     
-    if first_arrival_time < config.max_time:
+    if first_arrival_time <= config.max_time:
         first_event = Event(
             time=first_arrival_time, 
             event_type=EventType.ARRIVAL, 
@@ -229,7 +232,10 @@ def main():
             handle_arrival(current_event, config, load_balancer, event_queue, stats)
             
         elif current_event.event_type == EventType.DEPARTURE:
-            handle_departure(current_event, load_balancer, event_queue, stats)
+            handle_departure(current_event, config, load_balancer, event_queue, stats)
+
+    # Simulation ends when event queue is empty
+    stats.print_report()
 
 if __name__ == "__main__":
     main()
