@@ -1,5 +1,7 @@
+import collections
 import random
 from dataclasses import dataclass
+from typing import List, Deque, Optional, Tuple
 
 @dataclass
 class Request:
@@ -19,7 +21,7 @@ class Server:
             self.queue: Deque[Request] = collections.deque()
             self.current_request: Optional[Request] = None
 
-def can_accept(self) -> bool:
+    def can_accept(self) -> bool:
         """
         Checks if the server can accept a new request.
         A server rejects only if it is BUSY AND its Queue is FULL.
@@ -49,9 +51,7 @@ def can_accept(self) -> bool:
             
         # Case 3: Full
         return False # Dropped
-    
-    def 
-        
+            
 class LoadBalancer:
     def __init__(self, servers: List[Server], probabilities: List[float]):
         self.servers = servers
@@ -66,7 +66,7 @@ class LoadBalancer:
             (True, server_obj) if accepted.
             (False, None) if dropped.
         """
-        chosen_server = random.choices(self.servers.keys(), self.servers.values(), k=1)[0]
+        selected_server = random.choices(self.servers, self.probabilities, k=1)[0]
         accepted = selected_server.add_request(request)
     
         if accepted:

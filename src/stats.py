@@ -1,14 +1,14 @@
 
 class StatsCollector:
     def __init__(self):
-        self.droped_requests = 0
-        self.server_requests = 0
+        self.dropped_requests = 0
+        self.served_requests = 0
         self.total_wait_time = 0.0
         self.total_service_time = 0.0
-        last_departure_time: float = 0.0
-        _arrival_counter: int = 0
+        self.last_departure_time: float = 0.0
+        self._arrival_counter: int = 0
 
-def get_next_id(self) -> int:
+    def get_next_id(self) -> int:
         """Generates a unique ID for new requests."""
         req_id = self._arrival_counter
         self._arrival_counter += 1

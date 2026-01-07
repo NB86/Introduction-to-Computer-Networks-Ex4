@@ -5,6 +5,10 @@ import heapq
 import random
 
 from events import Event, EventType
+from network import Server, LoadBalancer, Request
+from stats import StatsCollector
+
+# Input example: 100 3 0.5 0.3 0.2 2.0 5 10 15 1.0 0.5 0.2
 
 @dataclass
 class SimulationConfig:
@@ -111,8 +115,7 @@ def handle_arrival(event: Event, config, load_balancer, event_queue, stats):
 
     # --- Process Current Request ---
     # Create the request object
-    req = Request(id=stats.get_next_id(), arrival_time=current_time)
-    stats.total_arrivals += 1
+    req = Request(id=stats.get_next_id(), arrival_time=current_time, service_start_time=None, service_duration=None)
     
     accepted, server = load_balancer.assign_request(req)
     
@@ -125,12 +128,12 @@ def handle_arrival(event: Event, config, load_balancer, event_queue, stats):
     # If the server took it and was idle, it is now BUSY and we must schedule its departure.
     # We identify this by checking if the request we just sent is the one currently in service.
     
-    if selected_server.current_request == req:
+    if server.current_request == req:
         # It skipped the queue!
         req.service_start_time = current_time # Wait time = 0
         
         # Calculate Service Duration (Exponential)
-        service_duration = random.expovariate(selected_server.service_rate)
+        service_duration = random.expovariate(server.service_rate)
         req.service_duration = service_duration
         
         departure_time = current_time + service_duration
@@ -140,7 +143,7 @@ def handle_arrival(event: Event, config, load_balancer, event_queue, stats):
             time=departure_time,
             event_type=EventType.DEPARTURE,
             payload=req,
-            server_index=selected_server.id
+            server_index=server.id
         )
         heapq.heappush(event_queue, dep_event)
         
@@ -200,19 +203,21 @@ def handle_departure(event: Event, load_balancer, event_queue, stats):
 
 def main():
     config = parse_args(sys.argv)
-    
+    servers = [Server(i, config.service_rates[i], config.queue_sizes[i]) for i in range(config.server_count)]
+    load_balancer = LoadBalancer(servers, config.probabilities)
+    stats = StatsCollector()
     current_time = 0.0
     event_queue = []
     first_interval = random.expovariate(config.arrival_rate)
     first_arrival_time = current_time + first_interval
     
     if first_arrival_time < config.max_time:
-    first_event = Event(
-        time=first_arrival_time, 
-        event_type=EventType.ARRIVAL, 
-        payload=None
-    )
-    heapq.heappush(event_queue, first_event)
+        first_event = Event(
+            time=first_arrival_time, 
+            event_type=EventType.ARRIVAL, 
+            payload=None
+        )
+        heapq.heappush(event_queue, first_event)
 
     while event_queue:
         current_event = heapq.heappop(event_queue)
@@ -221,10 +226,10 @@ def main():
         current_time = current_event.time
         
         if current_event.event_type == EventType.ARRIVAL:
-            handle_arrival(current_event, config, load_balancer, event_queue)
+            handle_arrival(current_event, config, load_balancer, event_queue, stats)
             
         elif current_event.event_type == EventType.DEPARTURE:
-            handle_departure(current_event, load_balancer, event_queue)
+            handle_departure(current_event, load_balancer, event_queue, stats)
 
 if __name__ == "__main__":
     main()
