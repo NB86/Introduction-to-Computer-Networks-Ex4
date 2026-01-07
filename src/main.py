@@ -8,8 +8,6 @@ from events import Event, EventType
 from network import Server, LoadBalancer, Request
 from stats import StatsCollector
 
-# Input example: 100 3 0.5 0.3 0.2 2.0 5 10 15 1.0 0.5 0.2
-
 @dataclass
 class SimulationConfig:
     """Holds the validated configuration for a simulation run."""
