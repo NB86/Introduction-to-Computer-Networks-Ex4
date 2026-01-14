@@ -1,6 +1,7 @@
 import random
 import heapq
 import sys
+import csv
 
 def main(arrival_rate, service_rate, simulation_time, max_queue_size):
     # Events
@@ -54,23 +55,44 @@ def main(arrival_rate, service_rate, simulation_time, max_queue_size):
     num_not_served = num_customers_rejected + len(queue)
 
     # Results
-    print(f"Number of customers served: {num_customers_served}")
-    print(f"Number of customers not served: {num_not_served}")
-    print(f"Average wait time: {total_wait_time / num_customers_served if num_customers_served > 0 else 0}")
+    avg_wait_time = total_wait_time / num_customers_served if num_customers_served > 0 else 0
+    
+    return {
+        "num_customers_served": num_customers_served,
+        "num_customers_not_served": num_not_served,
+        "average_wait_time": avg_wait_time
+    }
 
 if __name__ == "__main__":
     if len(sys.argv) != 5:
         print("Error: Invalid number of arguments")
-        print("Usage: python question1.py <arrival_rate> <service_rate> <simulation_time> <max_queue_size>")
+        print("Usage: python question1.py <arrival_rate> <service_rate> <max_queue_size> <num_runs>")
         sys.exit(1)
     
     try:
         arrival_rate = float(sys.argv[1])
         service_rate = float(sys.argv[2])
-        simulation_time = float(sys.argv[3])
-        max_queue_size = int(sys.argv[4])
+        max_queue_size = int(sys.argv[3])
+        num_runs = int(sys.argv[4])
     except ValueError:
-        print("Error: All arguments must be numeric (floats for rates/time, int for queue size)")
+        print("Error: All arguments must be numeric")
         sys.exit(1)
     
-    main(arrival_rate, service_rate, simulation_time, max_queue_size)
+    # Run simulation for different simulation times
+    with open('simulation_results.csv', 'w', newline='') as csvfile:
+        fieldnames = ['simulation_time', 'run', 'customers_served', 'customers_not_served', 'average_wait_time']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for sim_time in range(10, 101, 10):  # 10, 20, 30, ..., 100
+            for run in range(1, num_runs + 1):
+                results = main(arrival_rate, service_rate, sim_time, max_queue_size)
+                writer.writerow({
+                    'simulation_time': sim_time,
+                    'run': run,
+                    'customers_served': results['num_customers_served'],
+                    'customers_not_served': results['num_customers_not_served'],
+                    'average_wait_time': results['average_wait_time']
+                })
+    
+    print(f"Results saved to simulation_results.csv")
